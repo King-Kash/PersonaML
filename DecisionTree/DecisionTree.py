@@ -8,10 +8,10 @@ class Node:
         self.threshold = threshold #threshold for split
         self.left = left #left child
         self.right = right #right child 
-        self.value = None #only the leaf nodes will have values
+        self.value = value #only the leaf nodes will have values
 
-        def is_leaf_node(self): 
-            return self.value is not None
+    def is_leaf_node(self): 
+        return self.value is not None
         
 
 class DecisionTree:
@@ -29,12 +29,8 @@ class DecisionTree:
         self.root=None #need access to root node for infrence traversal
     
     def fit(self, X, y):
-        if self.n_features is None:
-            self.n_features = X.shape[1]
-        else:
-            self.n_features = min(X.shape[1], self.n_features)
-
-        self.root = self.grow_tree(X, y)
+        self.n_features = X.shape[1] if not self.n_features else min(X.shape[1],self.n_features)
+        self.root = self._grow_tree(X, y)
     
     def _grow_tree(self, X, y, depth=0):
         #depth keeps track current tree depth
@@ -111,6 +107,11 @@ class DecisionTree:
             return 0
 
         #calculate wegihted avg. of entropy of children
+
+        '''following lines to make sure y arrays are 1 dimensional'''
+        # y_l = np.asarray(y[left_idxs]).ravel().astype(int)
+        # y_r = np.asarray(y[right_idxs]).ravel().astype(int)
+
         n = len(y)
         n_l, n_r = len(left_idxs), len(right_idxs)
         e_l, e_r = self._entropy(y[left_idxs]), self._entropy(y[right_idxs])
@@ -124,6 +125,7 @@ class DecisionTree:
     #entropy of node. This is not conditional entropy caculation.
     def _entropy(self, y):
         '''Bincount creates a histogram of relative frequency for each element that appears in y'''
+        # y = np.array(y).ravel().astype(int) //makes y one dimensional array
         histogram = np.bincount(y)
         probabilities = histogram / len(y) #calculate probability of each possible y occuring. all of them stored in one array.
         return -np.sum([prob * np.log(prob) for prob in probabilities if prob>0]) #sum up all the probabilities
@@ -131,13 +133,12 @@ class DecisionTree:
     #split the parent entries into two child entries based on threshold
     def _split(self, X_column, split_threshold):
         '''Argwhere will return new array (N,1) with entries less than threshold. Flatten to make (N,) dim array.'''
-        left_idxs = np.argwhere(X_column<=split_threshold).flatten
-        right_idx = np.argwhere(X_column>split_threshold).flatten
+        left_idxs = np.argwhere(X_column<=split_threshold).flatten()
+        right_idx = np.argwhere(X_column>split_threshold).flatten()
         return left_idxs, right_idx
         
 
     def predict(self, X):
-        #prediction for each sample in test data
         return np.array([self._traverse_tree(x, self.root) for x in X])
     
     def _traverse_tree(self, x, node):
@@ -145,10 +146,9 @@ class DecisionTree:
         if node.is_leaf_node():
             return node.value
         
-        if x <= node.threshold:
+        if x[node.feature] <= node.threshold:
             return self._traverse_tree(x, node.left)
-        else:
-            return self._traverse_tree(x, node.right)
+        return self._traverse_tree(x, node.right)
     
 
 
